@@ -1,0 +1,343 @@
+<!-- Save as desk.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TAYAN SOLUTIONS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fc;
+    }
+
+    .logo {
+      width: 70px;
+      vertical-align: middle;
+      margin-right: auto;
+    }
+
+    .sidebar {
+      height: 100vh;
+      background-color: #fff;
+      border-right: 1px solid #e0e0e0;
+    }
+
+    .sidebar a {
+      display: block;
+      padding: 15px;
+      color: #333;
+      text-decoration: none;
+    }
+
+    .sidebar a.active {
+      background-color: #007bff;
+      color: white;
+    }
+
+    .status {
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .status.in-progress {
+      background-color: #cce5ff;
+      color: #004085;
+    }
+
+    .status.todo {
+      background-color: #fff3cd;
+      color: #856404;
+    }
+
+    .status.overdue {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    .status.completed {
+      background-color: #d4edda;
+      color: #155724;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="d-flex">
+    <div class="sidebar p-3">
+      <img src="trademark.jpeg" alt="Logo" class="logo">
+      <a href="#" class="active">Dashboard</a>
+      <a href="Taskm.html">Task Management</a>
+      <a href="Empm.html">Employee Management</a>
+      <a href="cal.html">Calendar</a>
+      <a href="Set.html">Settings</a>
+    </div>
+
+    <div class="container-fluid p-4">
+      <h2>Dashboard</h2>
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="bg-white p-3 rounded shadow-sm">Tasks in Progress: <strong id="progressCount">-</strong></div>
+        </div>
+        <div class="col-md-3">
+          <div class="bg-white p-3 rounded shadow-sm">Completed Tasks: <strong id="completedCount">-</strong></div>
+        </div>
+        <div class="col-md-3">
+          <div class="bg-white p-3 rounded shadow-sm">Overdue Tasks: <strong id="overdueCount">-</strong></div>
+        </div>
+        <div class="col-md-3">
+          <div class="bg-white p-3 rounded shadow-sm">Total Employees: <strong id="employeeCount">-</strong></div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <button class="btn btn-outline-secondary" id="generateReportBtn">Generate Report</button>
+      </div>
+
+      <div class="row">
+        <div class="col-md-8">
+          <div class="bg-white p-3 rounded shadow-sm mb-4">
+            <h5>Recent Tasks</h5>
+            <input type="text" class="form-control mb-2" id="taskSearch" placeholder="Search tasks..." />
+            <table class="table table-bordered table-hover table-striped" id="taskTable">
+              <thead class="table-light">
+                <tr>
+                  <th>Task Name</th>
+                  <th>Description</th>
+                  <th>Assign To</th>
+                  <th>Due Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="taskBody"></tbody>
+            </table>
+            <nav>
+              <ul class="pagination justify-content-end mb-0" id="pagination"></ul>
+            </nav>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="bg-white p-3 rounded shadow-sm mb-4">
+            <h5>Task Completion Rate</h5>
+            <canvas id="completionChart" height="150"></canvas>
+          </div>
+          <div class="bg-white p-3 rounded shadow-sm">
+            <h5>Task Distribution</h5>
+            <canvas id="distributionChart" height="105"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusClassMap = {
+      'in-progress': 'in-progress',
+      'todo': 'todo',
+      'pending': 'in-progress',
+      'overdue': 'overdue',
+      'completed': 'completed'
+    };
+
+    let allTasks = [];
+    let completionChart, distributionChart;
+
+    const ctxCompletion = document.getElementById('completionChart').getContext('2d');
+    const ctxDistribution = document.getElementById('distributionChart').getContext('2d');
+
+    function fetchTasks() {
+      fetch('http://localhost:3000/api/tasks')
+        .then(res => res.json())
+        .then(data => {
+          allTasks = data;
+          renderDashboardSummary(data);
+          renderTasks(data, 1);
+          renderPagination(data.length, 1);
+        });
+    }
+
+    function renderDashboardSummary(data) {
+      let inProgressCount = 0, completedCount = 0, overdueCount = 0;
+      const emailSet = new Set();
+      const completionByDate = {};
+      const departmentCount = {};
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      data.forEach(task => {
+        const status = task.status.toLowerCase();
+        const due = new Date(task.due_date);
+        due.setHours(0, 0, 0, 0);
+        emailSet.add(task.employee_email);
+
+        if (status === 'completed') completedCount++;
+        else if (due < today) overdueCount++;
+        else inProgressCount++;
+
+        const assignDate = new Date(task.assigned_date).toISOString().split('T')[0];
+        if (!completionByDate[assignDate]) completionByDate[assignDate] = { total: 0, completed: 0 };
+        completionByDate[assignDate].total++;
+        if (status === 'completed') completionByDate[assignDate].completed++;
+
+        if (task.Department)
+          departmentCount[task.Department] = (departmentCount[task.Department] || 0) + 1;
+      });
+
+      document.getElementById('progressCount').textContent = inProgressCount;
+      document.getElementById('completedCount').textContent = completedCount;
+      document.getElementById('overdueCount').textContent = overdueCount;
+      document.getElementById('employeeCount').textContent = emailSet.size;
+
+      updateCompletionChart(completionByDate);
+      updateDistributionChart(departmentCount);
+    }
+
+    function updateCompletionChart(dataMap) {
+      const dates = Object.keys(dataMap).sort();
+      const percentages = dates.map(date => {
+        const d = dataMap[date];
+        return Math.round((d.completed / d.total) * 100);
+      });
+
+      if (completionChart) completionChart.destroy();
+      completionChart = new Chart(ctxCompletion, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Completion %',
+            data: percentages,
+            borderColor: '#007bff',
+            tension: 0.4
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100
+            }
+          }
+        }
+      });
+    }
+
+    function updateDistributionChart(countMap) {
+      const labels = Object.keys(countMap);
+      const values = Object.values(countMap);
+      const colors = ['#007bff', '#28a745', '#ffc107', '#fd7e14', '#6f42c1', '#20c997'];
+
+      if (distributionChart) distributionChart.destroy();
+      distributionChart = new Chart(ctxDistribution, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors.slice(0, labels.length)
+          }]
+        },
+        options: {
+          cutout: '70%'
+        }
+      });
+    }
+
+    function paginateTasks(tasks, page = 1, pageSize = 5) {
+      const start = (page - 1) * pageSize;
+      return tasks.slice(start, start + pageSize);
+    }
+
+    function renderTasks(tasks, page = 1) {
+      const tbody = document.getElementById('taskBody');
+      tbody.innerHTML = '';
+      const paginated = paginateTasks(tasks, page);
+
+      paginated.forEach(task => {
+        const dueDate = new Date(task.due_date).toISOString().split('T')[0];
+        const status = task.status.toLowerCase();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const due = new Date(task.due_date);
+        due.setHours(0, 0, 0, 0);
+        let displayStatus = (status !== 'completed' && due < today) ? 'overdue' : status;
+
+        tbody.innerHTML += `
+          <tr>
+            <td>${task.task_name}</td>
+            <td>${task.task_description}</td>
+            <td>${task.name || task.employee_email}</td>
+            <td>${dueDate}</td>
+            <td><span class="status ${statusClassMap[displayStatus] || ''}">${displayStatus.replace('-', ' ')}</span></td>
+          </tr>`;
+      });
+    }
+
+    function renderPagination(totalItems, currentPage = 1, pageSize = 5) {
+      const pageCount = Math.ceil(totalItems / pageSize);
+      const pagination = document.getElementById('pagination');
+      pagination.innerHTML = '';
+
+      for (let i = 1; i <= pageCount; i++) {
+        pagination.innerHTML += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+          <a class="page-link" href="#">${i}</a></li>`;
+      }
+
+      document.querySelectorAll('#pagination .page-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const page = parseInt(e.target.textContent);
+          renderTasks(allTasks, page);
+          renderPagination(allTasks.length, page);
+        });
+      });
+    }
+
+    document.getElementById('taskSearch').addEventListener('input', e => {
+      const keyword = e.target.value.toLowerCase();
+      const filtered = allTasks.filter(task =>
+        task.task_name.toLowerCase().includes(keyword) ||
+        task.task_description.toLowerCase().includes(keyword) ||
+        (task.name || task.employee_email).toLowerCase().includes(keyword)
+      );
+      renderTasks(filtered, 1);
+      renderPagination(filtered.length, 1);
+    });
+
+    document.getElementById('generateReportBtn').addEventListener('click', () => {
+      const rows = Array.from(document.querySelectorAll('#taskTable tbody tr'));
+      const headers = ['Task Name', 'Description', 'Assignee', 'Due Date', 'Status'];
+      const csvRows = [headers.join(',')];
+
+      rows.forEach(row => {
+        const cols = row.querySelectorAll('td');
+        const rowData = Array.from(cols).map(col => {
+          const span = col.querySelector('span');
+          return span ? span.textContent.trim() : col.textContent.trim();
+        });
+        csvRows.push(rowData.join(','));
+      });
+
+      const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'task_report.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    fetchTasks();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

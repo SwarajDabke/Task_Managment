@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Task Mate Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome 6.5 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    .logo {
+      width: 90px;
+      vertical-align: middle;
+      margin-right: auto;
+    }
+  </style>
+</head>
+
+<body class="bg-white min-h-screen flex items-center justify-center px-4">
+  <div class="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between animate-fade-in">
+    
+    <!-- Left: Logo and Heading -->
+    <div class="md:w-1/2 mb-10 md:mb-0 text-center md:text-left">
+      <img src="trademark.jpeg" alt="Logo" class="logo inline-block mb-4">
+      <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900">Task Mate</h1>
+    </div>
+
+    <!-- Right: Login Form -->
+    <div class="md:w-1/2 max-w-md w-full bg-white p-6 rounded-lg shadow-lg border border-gray-300">
+
+      <h2 class="text-2xl font-bold text-gray-900 mb-1">Welcome Back</h2>
+      <p class="text-sm text-gray-600 mb-6">Sign in into your admin account</p>
+
+      <form id="loginForm" class="space-y-5">
+        <!-- Role Selection -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Select Role</label>
+          <select id="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option>Select your role</option>
+            <option>Admin</option>
+            <option>Employee</option>
+          </select>
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">📧</span>
+            <input type="email" id="email" placeholder="Enter your email" class="pl-10 w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">🔒</span>
+            <input type="password" id="password" placeholder="Enter your password" class="pl-10 pr-10 w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+            <i id="togglePassword" class="fa-solid fa-eye absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-pointer" onclick="togglePasswordVisibility()"></i>
+          </div>
+        </div>
+
+        <!-- Remember Me / Forgot -->
+        <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center">
+            <input type="checkbox" class="mr-2 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+            Remember me
+          </label>
+          <a href="#" class="text-blue-600 hover:underline">Forgot Password?</a>
+        </div>
+
+        <!-- Sign In Button -->
+        <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-all duration-300 shadow-md">
+          Sign in
+        </button>
+      </form>
+
+      <!-- Last Login -->
+      <p class="text-xs text-gray-400 text-center mt-6">Last login attempt: Today at 12:00 PM</p>
+
+      <!-- Message -->
+      <p id="message" class="mt-4 text-center text-sm font-medium"></p>
+    </div>
+  </div>
+
+  <script>
+    function togglePasswordVisibility() {
+      const passwordInput = document.getElementById("password");
+      const toggleIcon = document.getElementById("togglePassword");
+      const isVisible = passwordInput.type === "text";
+      passwordInput.type = isVisible ? "password" : "text";
+      toggleIcon.classList.toggle("fa-eye");
+      toggleIcon.classList.toggle("fa-eye-slash");
+    }
+  </script>
+  <script>
+document.getElementById('loginForm').addEventListener('submit', async function (e) {
+  e.preventDefault();
+
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const roleSelect = document.getElementById('role');
+  const role = roleSelect.value;
+
+  const messageEl = document.getElementById('message');
+  messageEl.textContent = '';
+  messageEl.style.color = '';
+
+  // Validate role selection
+  if (role === 'Select your role') {
+    messageEl.textContent = 'Please select your role';
+    messageEl.style.color = 'red';
+    return;
+  }
+
+  try {
+    const response = await fetch('http://localhost:3000/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password, role }) // Include role here
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      messageEl.textContent = 'Login successful! Redirecting...';
+      messageEl.style.color = 'green';
+      
+      // Use the role from server response instead of dropdown
+      if (result.role === "Admin") {
+        setTimeout(() => {
+          window.location.href = 'http://localhost:3000/admindesk.html';
+        }, 1000);
+      } else if (result.role === "Employee") {
+        setTimeout(() => {
+          window.location.href = 'http://localhost:3000/Empdesk.html';
+        }, 1000);
+      }
+    } else {
+      messageEl.textContent = result.error || "Invalid email or password";
+      messageEl.style.color = "red";
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    messageEl.textContent = "Network error. Please try again.";
+    messageEl.style.color = "red";
+  }
+});
+</script>
+
+</body>
+
+</html>

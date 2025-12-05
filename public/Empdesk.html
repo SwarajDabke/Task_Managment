@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Employee Task Dashboard</title>
+    <!--<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>-->
+    <style>
+      :root {
+        /*--primary: #004085;*/
+        color: black;
+      }
+
+      * {
+        box-sizing: border-box;
+        /*padding: auto;*/
+      }
+
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background-color: #f8f9fb;
+        margin: 0;
+        /*padding: 0;*/
+        height: 100%;
+        width: 100%;
+      }
+
+      .logo {
+        width: 60px;
+        vertical-align: middle;
+        margin-right: auto;
+      }
+
+      .container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        width: 100%;
+        max-width: 1200px;
+        height: calc(100vh - 4rem);
+        margin: 2rem auto;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        overflow-y: auto;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        /*border-bottom: 2px solid var(--primary);*/
+        border-bottom: 2px solid #000;
+
+        padding-bottom: 0.5rem;
+      }
+
+      .header h2 {
+        margin: 0;
+        color: var(--primary);
+        color: black;
+      }
+
+      .avatar {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0.25rem;
+        color: #000;
+        font-size: 0.9rem;
+      }
+
+      .avatar span strong {
+        font-size: 1rem;
+      }
+
+      .avatar img {
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 1.5rem;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 0.75rem;
+        vertical-align: top;
+      }
+
+      th {
+        background: whitesmoke;
+        color: black;
+      }
+      #taskTable {
+        font-weight: 200;
+        font-style: normal;
+      }
+
+      /*tr:nth-child(even) {
+      background-color: #f5f7fa;
+    }*/
+
+      .status {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        display: inline-block;
+      }
+
+      .todo {
+        background-color: #fff3cd;
+        color: #856404;
+        font-weight: 600;
+      }
+
+      .in-progress {
+        background-color: #cce5ff;
+        color: #004085;
+        font-weight: 600;
+      }
+
+      .completed {
+        background-color: #d4edda;
+        color: #155724;
+        font-weight: 600;
+      }
+
+      .overdue {
+        background-color: #f8d7da;
+        color: #721c24;
+        font-weight: 600;
+      }
+
+      select {
+        padding: 6px 10px;
+        border-radius: 5px;
+        font-size: 0.9rem;
+        border: 1px solid gray;
+        background-color: #f8f9fbdc;
+      }
+
+      select:focus {
+        outline: none;
+        border-color: black;
+        box-shadow: 0 0 4px #000;
+      }
+
+      .desc-btn {
+        background: rgb(200, 232, 245);
+        color: black;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+
+      .desc-btn:hover {
+        background: rgb(132, 198, 228);
+      }
+
+      /* Modal */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 999;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100vh;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.4);
+      }
+
+      .modal-content {
+        background-color: whitesmoke;
+        margin: 10% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .modal-content h3 {
+        margin-top: 0;
+        color: black;
+      }
+
+      .close {
+        color: black;
+        float: right;
+        font-size: 28px;
+        cursor: pointer;
+      }
+
+      .close:hover {
+        color: gray;
+      }
+
+      .logout-btn {
+        background-color: rgb(235, 76, 76);
+        color: white;
+        padding: 5px 5px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .logout-btn:hover {
+        background-color: rgb(203, 44, 44);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <img src="/trademark.jpeg" alt="Logo" class="logo" />
+        <div class="avatar">
+          <span>Welcome, <strong>Darshana Gaikwad</strong></span>
+          <span>Mail ID: <strong>darshana10@gmail.com</strong></span>
+          <span id="currentTime"></span>
+           <!-- <img src="user4.jpg" alt="User Avatar" /> -->
+          <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Task Name</th>
+            <th>Assigned Date</th>
+            <th>Due Date</th>
+            <th>Status</th>
+            <th>Description</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="taskTable">
+          <!-- Dynamic rows go here -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Modal -->
+    <div id="descModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3>Task Description</h3>
+        <p id="descContent"></p>
+      </div>
+    </div>
+
+    <script>
+      const tasks = [
+        {
+          name: "Update dashboard design",
+          description: "Revamp the dashboard layout with new color scheme.",
+          due: "2025-05-14",
+          assigned: "2025-05-10",
+          status: "in-progress",
+        },
+        {
+          name: "API Integration",
+          description:
+            "Connect frontend with backend APIs for task management.",
+          due: "2025-05-15",
+          assigned: "2025-05-08",
+          status: "todo",
+        },
+        {
+          name: "Client presentation",
+          description:
+            "Prepare the slides and talking points for the upcoming client demo.",
+          due: "2025-05-10",
+          assigned: "2025-05-01",
+          status: "overdue",
+        },
+        {
+          name: "Feature testing",
+          description: "Test all new features in staging before going live.",
+          due: "2025-09-25",
+          assigned: "2025-05-09",
+          status: "completed",
+        },
+      ];
+
+      const statusLabels = {
+        todo: "Todo",
+        "in-progress": "In Progress",
+        completed: "Completed",
+        overdue: "Overdue",
+      };
+
+      function openModal(description) {
+        document.getElementById("descContent").innerText = description;
+        document.getElementById("descModal").style.display = "block";
+      }
+
+      function closeModal() {
+        document.getElementById("descModal").style.display = "none";
+      }
+
+      function createRow(task, index) {
+        const today = new Date();
+        const dueDate = new Date(task.due);
+        const isOverdue = today > dueDate && task.status !== "completed"; // Check if task is overdue and not already completed
+
+        // Set the task status to "overdue" if the due date has passed
+        if (isOverdue && task.status !== "completed") {
+          task.status = "overdue";
+        }
+
+        return `
+        <tr>
+          <td><strong>${task.name}</strong></td>
+          <td>${task.assigned}</td>
+          <td>${
+            isOverdue
+              ? `<span style="color: red;">${task.due}</span>`
+              : task.due
+          }</td>
+          <td><span class="status ${task.status}">${
+          statusLabels[task.status]
+        }</span></td>
+          <td>
+            <button class="desc-btn" onclick="openModal('${task.description.replace(
+              /'/g,
+              "\\'"
+            )}')">View</button>
+          </td>
+          <td>
+            <select onchange="changeStatus(${index}, this.value)">
+              <option value="todo" ${
+                task.status === "todo" ? "selected" : ""
+              }>Todo</option>
+              <option value="in-progress" ${
+                task.status === "in-progress" ? "selected" : ""
+              }>In Progress</option>
+              <option value="completed" ${
+                task.status === "completed" ? "selected" : ""
+              }>Completed</option>
+              <option value="overdue" ${
+                task.status === "overdue" ? "selected" : ""
+              }>Overdue</option>
+            </select>
+          </td>
+        </tr>
+      `;
+      }
+
+      function renderTasks() {
+        const table = document.getElementById("taskTable");
+        table.innerHTML = tasks.map((task, i) => createRow(task, i)).join("");
+      }
+
+      function changeStatus(index, newStatus) {
+        tasks[index].status = newStatus;
+        renderTasks();
+      }
+
+      function updateClock() {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString("en-GB");
+        const timeStr = now.toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        document.getElementById(
+          "currentTime"
+        ).innerText = `${dateStr}, ${timeStr}`;
+      }
+
+      function logout() {
+        if (confirm("Are you sure you want to logout?")) {
+          window.location.href = "login.html";
+        }
+      }
+
+      setInterval(updateClock, 1000);
+      updateClock();
+      renderTasks();
+    </script>
+  </body>x
+</html>
